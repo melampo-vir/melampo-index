@@ -2,3 +2,4 @@
 /.project
 /target
 /.settings
+/src/test/resources/lire/index/LuceneIndex
