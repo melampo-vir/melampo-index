@@ -49,7 +49,7 @@ public class MelampoSearcherHub {
 			}
 	}
 
-	public void query(ArrayList<String> values, ArrayList<String> fields,
+	public void query(List<String> values, List<String> fields,
 			boolean isQueryID) throws VIRException {
 		queryResults = null;
 		isParallel = false;
