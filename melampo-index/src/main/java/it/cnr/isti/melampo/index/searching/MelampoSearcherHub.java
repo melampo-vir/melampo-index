@@ -6,6 +6,7 @@ import it.cnr.isti.melampo.vir.exceptions.VIRException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -45,10 +46,17 @@ public class MelampoSearcherHub {
 					parallelSearcher = new ParallelSearcher(indexImpl);
 				}
 			} catch (Exception e) {
-				throw new VIRException(e);
+				throw new VIRException(VIRException.MESSAGE_OPEN_INDICES, e);
 			}
 	}
 
+	/**
+	 * 
+	 * @param values
+	 * @param fields
+	 * @param isQueryID
+	 * @throws VIRException
+	 */
 	public void query(List<String> values, List<String> fields,
 			boolean isQueryID) throws VIRException {
 		queryResults = null;
@@ -76,9 +84,10 @@ public class MelampoSearcherHub {
 				index.reorderResults();
 			}
 		} catch (ParseException e) {
-			throw new VIRException(e);
+			
+			throw new VIRException("Cannot parse query for fields: " + fields + "and Values: "+ values, e);
 		} catch (IOException e) {
-			throw new VIRException(e);
+			throw new VIRException("Cannot search index! ", e);
 		}
 	}
 

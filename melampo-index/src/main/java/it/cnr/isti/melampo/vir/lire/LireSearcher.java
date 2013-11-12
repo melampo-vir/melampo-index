@@ -35,7 +35,7 @@ public class LireSearcher {
 				featureColl = CoPhIRv2Reader.getObj(new BufferedReader(new StringReader(query)));
 			obj = new LireObject(featureColl);
 		} catch (Exception e) {
-			throw new VIRException(e);
+			throw new VIRException(VIRException.MESSAGE_FEATURE_COLLECTION, e);
 		}
 		return obj;
 	}
