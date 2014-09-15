@@ -157,6 +157,7 @@ public class LireMP7CSearcher implements MelampoSearcher {
 			Document d = null;
 			d = m_sMPG7C.doc(m_hits[startFrom + i].doc);
 			retval[i][1] = d.get(Parameters.IDFIELD);
+			retval[i][2] = d.get(Parameters.THMBURL);
 		}
 		return retval;
 	}

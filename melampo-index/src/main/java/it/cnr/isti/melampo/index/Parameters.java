@@ -3,6 +3,7 @@ package it.cnr.isti.melampo.index;
 public class Parameters {
 	
 	public static final String IDFIELD="ID";
+	public static final String THMBURL="THMBURL";
 	public static final String MP7ALL="MP7ALL";
 	public static final String MP7COL="MP7COL";
 	public static final String MP7TEXTR="MP7TEXTURE";
