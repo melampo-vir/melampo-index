@@ -132,6 +132,10 @@ public class LireSettings {
 //		return m_itemsToIndex;
 //	}
 
+	/*
+	 * the creation of the new index must not be decided basing on the static configurations, but it must be decided programatically
+	 */
+	@Deprecated  
 	public boolean isCreateIndex() {
 		return this.m_createIndex;
 	}

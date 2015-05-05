@@ -66,6 +66,11 @@ public class LireIndexer extends MelampoIndexerAbstract {
 
 		index = FSDirectory.open(f);
 
+		if(!f.exists())
+			m_create = true;
+		else
+			m_create = false;
+			
 		m_w = new IndexWriter(index, wrapper, m_create,
 				IndexWriter.MaxFieldLength.UNLIMITED);
 
