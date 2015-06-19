@@ -64,11 +64,13 @@ public class MelampoSearcherHub {
 		List<String> queriesList = new ArrayList<String>();
 		List<String> fieldsList = new ArrayList<String>();
 		MelampoSearcher indexCheck = null;
+		String query;
 		try {
 			for (int i = 0; i < fields.size(); i++) {
 				index = null;
 				if ((index = indexImpl.get(fields.get(i))) != null) {
-					queriesList.add(index.prepareQuery(values.get(i), fields.get(i), isQueryID));
+					query = index.prepareQuery(values.get(i), fields.get(i), isQueryID);
+					queriesList.add(query);
 					fieldsList.add(fields.get(i));
 					//test if they are the same index instance
 					if (indexCheck != null && index != indexCheck) {
@@ -80,7 +82,8 @@ public class MelampoSearcherHub {
 			if (isParallel) {
 				parallelSearcher.query(queriesList, fieldsList);
 			} else {
-				index.query();
+				//query one field
+				index.query(fields.get(0));
 				index.reorderResults();
 			}
 		} catch (ParseException e) {

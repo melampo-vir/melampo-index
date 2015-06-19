@@ -27,16 +27,16 @@ import org.apache.lucene.store.FSDirectory;
 
 public class LireIndexer extends MelampoIndexerAbstract {
 
-	private IndexWriter m_w;
-	private LireObjectFieldAdder m_sfaALL = null;
+	protected IndexWriter m_w;
+	protected LireObjectFieldAdder m_sfaALL = null;
 
-	private boolean m_create;
-	private String m_lucenePath;
-	private int m_toppivs;
-	private int m_nPivots;
-	private String m_PivFile;
-	private IndexReader rMPG7C;
-	private IndexSearcher m_sMPG7C;
+	protected boolean m_create;
+	protected String m_lucenePath;
+	protected int m_toppivs;
+	protected int m_nPivots;
+	protected String m_PivFile;
+	protected IndexReader rMPG7C;
+	protected IndexSearcher m_sMPG7C;
 
 	public void OpenIndex(File propertyFile) throws IOException, VIRException {
 		LireSettings settings = null;
@@ -54,8 +54,7 @@ public class LireIndexer extends MelampoIndexerAbstract {
 
 		Directory index = null;
 
-		WhitespaceAnalyzer wsa = new WhitespaceAnalyzer();
-		wrapper.addAnalyzer(Parameters.LIRE_MP7ALL, wsa);
+		registerAnalyzers();
 
 		m_create = settings.isCreateIndex();
 
@@ -84,10 +83,19 @@ public class LireIndexer extends MelampoIndexerAbstract {
 		m_nPivots = settings.getnPivots();
 		m_PivFile = settings.getPivotsPath();
 
-		m_sfaALL = new LireObjectFieldAdder(new LireMetric());
-		m_sfaALL.loadBinPivots(m_PivFile, m_nPivots);
+		initLireObjectFieldAdder();
 
 		m_toppivs = settings.getToppivsI();
+	}
+
+	protected void initLireObjectFieldAdder() {
+		m_sfaALL = new LireObjectFieldAdder(new LireMetric());
+		m_sfaALL.loadBinPivots(m_PivFile, m_nPivots);
+	}
+
+	protected void registerAnalyzers() {
+		WhitespaceAnalyzer wsa = new WhitespaceAnalyzer();
+		wrapper.addAnalyzer(Parameters.LIRE_MP7ALL, wsa);
 	}
 
 	public void addDocument(LireObject s, String uri)

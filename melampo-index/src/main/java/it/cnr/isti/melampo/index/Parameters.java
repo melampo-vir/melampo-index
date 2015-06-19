@@ -20,6 +20,8 @@ public class Parameters {
 	public static final String LIRE_CEDD="LIRE_CEDD";
 	public static final String LIRE_FCTH="LIRE_FCTH";
 	public static final String LIRE_MP7ALL="LIRE_MP7ALL";
+	public static final String CC_DCD="CC_DCD";
+	
 		
 	protected static int m_hitsPerPage = 100;
 

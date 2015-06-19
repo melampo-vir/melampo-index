@@ -24,6 +24,8 @@ public interface MelampoSearcher {
 
 	public void query() throws ParseException, IOException;
 	
+	public void query(String fieldName) throws ParseException, IOException;
+	
 	public Occur getOccur();
 
 	public void reorderResults();

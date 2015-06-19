@@ -54,8 +54,8 @@ public class LireObjectFieldAdder {
 	}
 
 	
-	public LireObjectFieldAdder(String fileadname){
-		m_fieldname = fileadname;
+	public LireObjectFieldAdder(String filedname){
+		m_fieldname = filedname;
 	}
 	
 	//binary file
@@ -68,10 +68,13 @@ public class LireObjectFieldAdder {
         	DataInputStream in = null;
         	in = new DataInputStream( new BufferedInputStream ( new FileInputStream(filename)));
             //ObjectInputStream ros_file=new ObjectInputStream(new FileInputStream(filename));
-			
+			//TODO: what if we have less pivots in the database
             for(int i=0;i<NumOfPivots;i++)
 			{
-            	m_moPivots[i] = new LireObject(in);
+            	if(in.available() > 0)
+            			m_moPivots[i] = new LireObject(in);
+            	else
+            		break;
 			}
 			
             in.close();

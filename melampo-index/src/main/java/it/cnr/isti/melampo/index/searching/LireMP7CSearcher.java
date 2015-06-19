@@ -6,11 +6,13 @@ import it.cnr.isti.melampo.index.Parameters;
 import it.cnr.isti.melampo.index.settings.LireSettings;
 import it.cnr.isti.melampo.vir.exceptions.VIRException;
 import it.cnr.isti.melampo.vir.lire.LireSearcher;
+import it.cnr.isti.vir.features.lire.vd.CcDominantColor;
 import it.cnr.isti.vir.features.mpeg7.LireObject;
 import it.cnr.isti.vir.similarity.metric.LireMetric;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.PerFieldAnalyzerWrapper;
@@ -86,9 +88,7 @@ public class LireMP7CSearcher implements MelampoSearcher {
 						+ " docs");
 			}
 
-			StandardAnalyzer sa = new StandardAnalyzer(ver);
-			m_wrapper = new PerFieldAnalyzerWrapper(sa);
-			m_wrapper.addAnalyzer(Parameters.LIRE_MP7ALL, analyzer);
+			initAnalyzers();
 
 			m_nPivots = settings.getnPivots();
 			m_PivFile = settings.getPivotsPath();
@@ -102,45 +102,78 @@ public class LireMP7CSearcher implements MelampoSearcher {
 		}
 	}
 
-	public String prepareQuery(String value, String field, boolean isQueryID)
-			throws VIRException {
+	protected void initAnalyzers() {
+		StandardAnalyzer sa = new StandardAnalyzer(ver);
+		m_wrapper = new PerFieldAnalyzerWrapper(sa);
+		m_wrapper.addAnalyzer(Parameters.LIRE_MP7ALL, analyzer);
+		m_wrapper.addAnalyzer(Parameters.CC_DCD, analyzer);
+	}
+
+	public String prepareQuery(String value, String field, boolean isQueryID, int topPivots) throws VIRException{
 		if (isQueryID) {
 			try {
-				int docid = getDocIDFromURI(value);
+				int docid = getDocIDForURI(value);
 				if (docid < 0)
 					throw new ParseException(
 							"There is no document in the index for the given "
 									+ Parameters.IDFIELD + value);
 				
-				query = getTopFieldFromDocID(docid, field, m_toppivsQ);
+				query = buildQueryStringForDoc(docid, field, topPivots);
 			} catch (ParseException e) {
 				throw new VIRException(VIRException.MESSAGE_WRONG_ID, e);
 			} catch (IOException e) {
 				throw new VIRException(VIRException.MESSAGE_IO_PROBLEM, e);
 			}
 		} else {
-			sq = m_soSearcher.getObject(value);
-			query = m_sfaALL.metricObjectToStringQ(sq, m_toppivsQ, m_toppivsI);
+			query = buildQueryStringFromFeatures(value, field, topPivots);
 		}
 		// System.out.println(query);
 		return query;
 	}
 
+	protected String buildQueryStringFromFeatures(String features, String field, int queryPivots) throws VIRException {
+		sq = m_soSearcher.getObject(features);
+		if (isDcField(field)){
+			CcDominantColor descriptor = (CcDominantColor) sq.getFeature(CcDominantColor.class);
+			return buildQueryStringForDescriptor(descriptor, queryPivots);
+		} else {
+			//return m_sfaALL.metricObjectToStringQ(sq, m_toppivsQ, m_toppivsI);
+			return m_sfaALL.metricObjectToStringQ(sq, queryPivots, m_toppivsI);
+		}
+		
+		
+	}
+	
+	
+	private String buildQueryStringForDescriptor(CcDominantColor descriptor,
+			int queryPivots) {
+		
+		StringBuilder topTermsQuery = new StringBuilder();
+		int termCount = Math.min(queryPivots, descriptor.getCentroids().size());
+		
+		//the 
+		for(int i=0; i < termCount; i++){
+			appendTerm(topTermsQuery, descriptor.getCentroids().get(i), descriptor.getScore()[i]);
+		}
+		return topTermsQuery.toString();
+	}
+
+	public String prepareQuery(String value, String field, boolean isQueryID)
+			throws VIRException {
+	
+		int queryPivots = getTopQueryPivotsCount(field);
+		return this.prepareQuery(value, field, isQueryID, queryPivots);
+	}
+
+	protected int getTopQueryPivotsCount(String field) {
+		if(isDcField(field))
+			return 5;
+		else 
+			return m_toppivsQ;
+	}
+
 	public void query() throws ParseException, IOException {
-		BooleanClause.Occur[] flags = new BooleanClause.Occur[1];
-		flags[0] = getOccur();
-
-		String[] v = { query };
-		String[] f = { Parameters.LIRE_MP7ALL };
-
-		Query q = MultiFieldQueryParser.parse(ver, v, f, flags, m_wrapper);
-
-		TopDocs td = null;
-
-		System.out.println("Using standalone MPEG-7 combined features index");
-		td = m_sMPG7C.search(q, m_retrieve);
-
-		m_hits = td.scoreDocs;
+		query(Parameters.LIRE_MP7ALL);
 	}
 
 	public void reorderResults() {
@@ -178,7 +211,7 @@ public class LireMP7CSearcher implements MelampoSearcher {
 		return analyzer;
 	}
 
-	private int getDocIDFromURI(String uri) throws ParseException, IOException {
+	private int getDocIDForURI(String uri) throws ParseException, IOException {
 		Query q = null;
 		q = new TermQuery(new Term(Parameters.IDFIELD, uri));
 
@@ -189,24 +222,65 @@ public class LireMP7CSearcher implements MelampoSearcher {
 			return -1;
 	}
 
-	private String getTopFieldFromDocID(int docID, String field, int topq)
+	private String buildQueryStringForDoc(int docID, String field, int topq)
 			throws ParseException, IOException {
 
 		//TODO: check if this code is redundant. See also exception in prepareQuery method
 		if (docID == -1)
 			return "";
 
-		return getTopFieldFromTFV(rMPG7C.getTermFreqVector(docID, field), topq);
+		if(isDcField(field))
+			return getTopTermsFromTFV(rMPG7C.getTermFreqVector(docID, field), topq);
+		else
+			return getTopPivotsFromTFV(rMPG7C.getTermFreqVector(docID, field), topq);
 
 	}
 
-	private String getTopFieldFromTFV(TermFreqVector tf, int topq) {
+	protected boolean isDcField(String field) {
+		return Parameters.CC_DCD.equals(field);
+	}
+
+	private String getTopTermsFromTFV(TermFreqVector tf, int topq) {
+		StringBuilder topTermsQuery = new StringBuilder();
+
+		String[] t = tf.getTerms();
+		int[] f = tf.getTermFrequencies();
+		int[] sorted = f.clone();
+		//ascending order
+		Arrays.sort(sorted);
+		int thresholdPos = 0;
+		if(sorted.length > topq)
+			thresholdPos = sorted.length - topq;//e.g. 10 - 3 = 7 (will build query with 7, 8, 9)
+		int threshold = sorted[thresholdPos];
+		
+		int frequency;
+		String term;
+		for (int i = 0; i < t.length; i++) {
+			frequency = f[i];
+			term = t[i];
+			if (frequency >= threshold) {
+				appendTerm(topTermsQuery, term, frequency);
+			}
+		}
+
+		return topTermsQuery.toString();
+	}
+
+	void appendTerm(StringBuilder topTermsQuery, String term, int frequency) {
+		if(frequency > 0)
+			topTermsQuery.append(term).append("^").append(frequency).append(" ");
+	}
+	
+	private String getTopPivotsFromTFV(TermFreqVector tf, int topq) {
 		String outstr = "";
 
 		String[] t = tf.getTerms();
 		int[] f = tf.getTermFrequencies();
 
+		//for all pivots
 		for (int i = 0; i < t.length; i++) {
+			//topq freq
+			//TF [0... t.length] (t.length = number of pivots used during indexing)
 			if (f[i] > t.length - topq) {
 				// outstr = outstr + t[i]+"^"+f[i]+" ";
 				outstr = outstr + t[i] + "^" + (f[i] - (t.length - topq)) + " ";
@@ -214,6 +288,25 @@ public class LireMP7CSearcher implements MelampoSearcher {
 		}
 
 		return outstr;
+	}
+
+	@Override
+	public void query(String fieldName) throws ParseException, IOException {
+		BooleanClause.Occur[] flags = new BooleanClause.Occur[1];
+		flags[0] = getOccur();
+
+		String[] v = { query };
+		String[] f = { fieldName };
+
+		Query q = MultiFieldQueryParser.parse(ver, v, f, flags, m_wrapper);
+
+		TopDocs td = null;
+
+		System.out.println("Using standalone MPEG-7 combined features index" + fieldName);
+		td = m_sMPG7C.search(q, m_retrieve);
+
+		m_hits = td.scoreDocs;
+		
 	}
 
 }
